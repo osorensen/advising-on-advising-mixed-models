@@ -1,0 +1,31 @@
+---
+title: "Estimation of Mixed-Effects Models"
+author: "Øystein Sørensen"
+format: revealjs
+---
+
+# Maximum Marginal Likelihood and REML
+
+## Linear Mixed Model
+
+$$
+\boldsymbol{y} = \boldsymbol{X} \boldsymbol{\beta} + \boldsymbol{Z} \boldsymbol{b} + \boldsymbol{\epsilon}
+$$
+
+:::{.incremental}
+- $\boldsymbol{\beta}$ is fixed (the population average)
+- $\boldsymbol{b}$ and $\boldsymbol{\epsilon}$ are random (properties of the *sample*)
+- all we do is conditional on $\boldsymbol{X}$
+- $\boldsymbol{y}$ just follows given the things above
+:::
+
+## Need Some Kind of Nesting
+
+$$
+y_{ij} = \boldsymbol{x}_{ij}^{T} \boldsymbol{\beta} + \boldsymbol{z}_{ij}^{T} \boldsymbol{b}_{i} + \epsilon_{ij}
+$$
+
+
+# Approximate Estimation
+
+# Numerical Issues
