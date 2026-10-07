@@ -1,31 +1,455 @@
 ---
 title: "Estimation of Mixed-Effects Models"
 author: "Øystein Sørensen"
-format: revealjs
+format:
+  revealjs:
+    include-in-header: mathjax-svg.html
+bibliography: references.bib
 ---
 
-# Maximum Marginal Likelihood and REML
+```{r, message=FALSE}
+library(tidyverse)
+```
+
+
+# Linear Mixed Models
+
+
+```{r}
+#| echo: false
+set.seed(11)
+
+# Population parameters: E(y) = b0 + b1 * x
+b0 <- 20
+b1 <- 0.5
+sd_u0 <- 3     # random intercept SD
+sd_u1 <- 0.3   # random slope SD
+sd_eps <- 1    # residual SD
+n_id <- 100
+max_followup <- 5
+
+# Irregular measurement times: first visit at 0, last at end of follow-up,
+# any visits in between drawn uniformly
+sim_times <- function(n_obs, followup) {
+  if (n_obs == 1) return(0)
+  c(0, sort(runif(n_obs - 2, 0, followup)), followup)
+}
+
+dat <- tibble(
+  id = factor(seq_len(n_id)),
+  n_obs = sample(1:5, n_id, replace = TRUE),
+  followup = if_else(n_obs > 1, runif(n_id, 0, max_followup), 0),
+  u0 = rnorm(n_id, sd = sd_u0),
+  u1 = rnorm(n_id, sd = sd_u1)
+) |>
+  mutate(
+    followup = followup / max(followup) * max_followup, # longest follow-up exactly 8 years
+    baseline = runif(n_id, 0, 15 - followup),
+    time = map2(n_obs, followup, sim_times)
+  ) |>
+  unnest(time) |>
+  mutate(
+    x = baseline + time,
+    y = b0 + u0 + (b1 + u1) * x + rnorm(n(), sd = sd_eps)
+  )
+```
+
+## Data
+
+```{r}
+#| echo: false
+
+p <- ggplot(dat, aes(x, y, group = id)) +
+  geom_point(alpha = 0.6, size = 1) +
+  labs(x = "Time (years)", y = "y") +
+  theme_minimal(base_size = 18)
+
+p
+```
+
+## Clustered Data
+
+```{r}
+#| echo: false
+
+p + geom_line(alpha = 0.4)
+```
 
 ## Linear Mixed Model
 
 $$
-\boldsymbol{y} = \boldsymbol{X} \boldsymbol{\beta} + \boldsymbol{Z} \boldsymbol{b} + \boldsymbol{\epsilon}
+y_{ij} = \beta_{0} + b_{0i} + (\beta + b_{i}) x_{ij} + \epsilon_{ij}
 $$
+
+. . .
+
+in matrix form
+
+$$
+y = X \beta + Z b + \epsilon
+$$
+
+. . .
+
+in `lme4`
+
+```{r}
+#| echo: true
+library(lme4)
+mod <- lmer(y ~ x + (x | id), data = dat)
+```
+
+## Fixed Effect Matrix
+
+$$
+y = X \beta + Z b + \epsilon
+$$
+
+```{r}
+#| echo: true
+
+X <- getME(mod, "X")
+dim(X)
+X[1:8, ]
+```
+
+
+## Random Effect Matrix
+
+$$
+y = X \beta + Z b + \epsilon
+$$
+
+```{r}
+#| echo: true
+
+Z <- getME(mod, "Z")
+dim(Z)
+Z[1:8, 1:6]
+```
+
+## Estimation
+
+Given $b \sim N(0, G)$ and $\epsilon \sim N(0, \sigma^{2} I)$, $\hat{\beta}$ and $\hat{b}$ solve the penalized least squares problem
+
+$$
+\min_{\beta,\, b} \; \lVert y - X\beta - Zb \rVert^{2} + \sigma^{2}\, b^{T} G^{-1} b
+$$
+
+## Estimation
+
+Henderson's mixed model equations [@hendersonBestLinearUnbiased1975]
+
+$$
+\begin{bmatrix}
+X^{T}X & X^{T}Z \\
+Z^{T}X & Z^{T}Z + \sigma^{2} G^{-1}
+\end{bmatrix}
+\begin{bmatrix}
+\hat{\beta} \\
+\hat{b}
+\end{bmatrix}
+=
+\begin{bmatrix}
+X^{T}y \\
+Z^{T}y
+\end{bmatrix}
+$$
+
+. . .
+
+- The ridge penalty on $b$ makes the system nonsingular
+- But the penalty depends on $G$ and $\sigma^{2}$, which are unknown
+
+## Marginal Likelihood
+
+Integrate out the random effects
+
+$$
+L(\beta, \sigma^{2}, G) = \int_{\mathbb{R}^{q}}
+\underbrace{p(y \mid b;\, \beta, \sigma^{2})}_{N(X\beta + Zb,\; \sigma^{2} I)}\,
+\underbrace{p(b;\, G)}_{N(0,\; G)}
+\; \mathrm{d}b
+$$
+
+. . .
+
+Closed form: $y \sim N(X\beta,\, ZGZ^{T} + \sigma^{2} I)$
+
+. . .
+
+- $b$ is integrated out: maximize over $\beta$, $\sigma^{2}$ and $G$ alone
+
+## Maximum Marginal Likelihood
+
+With $\theta = (\sigma^{2}, G)$ and $V_{\theta} = ZGZ^{T} + \sigma^{2} I$
+
+$$
+\begin{aligned}
+&-2 \ell_{\text{ML}}(\beta, \theta) = \\
+& n \log 2\pi + \log \lvert V_{\theta} \rvert + (y - X\beta)^{T} V_{\theta}^{-1} (y - X\beta)
+\end{aligned}
+$$
+
+. . .
+
+For given $\theta$, the maximizer over $\beta$ is the GLS estimate
+
+$$
+\hat{\beta}_{\theta} = \left(X^{T} V_{\theta}^{-1} X\right)^{-1} X^{T} V_{\theta}^{-1} y
+$$
+
+. . .
+
+- Plug in $\hat{\beta}_{\theta}$ and optimize the profile likelihood over $\theta$ only
+
+## Restricted Maximum Likelihood
+
+Integrate out $\beta$ too [@harvilleBayesianInferenceVariance1974]
+
+$$
+L_{\text{REML}}(\theta) = \int_{\mathbb{R}^{p}} L(\beta, \theta) \, \mathrm{d}\beta
+$$
+
+. . .
+
+$$
+\begin{aligned}
+& -2 \ell_{\text{REML}}(\theta) = \\
+&-2 \ell_{\text{ML}}(\hat{\beta}_{\theta}, \theta) + \log \lvert X^{T} V_{\theta}^{-1} X \rvert - p \log 2\pi
+\end{aligned}
+$$
+
+. . .
+
+- ML ignores that $\beta$ is estimated: variance components biased downward, like $\text{RSS}/n$ vs. $\text{RSS}/(n - p)$
+- Matters with few clusters or many fixed effects
+
+## REML and Model Comparison
+
+REML likelihoods are not comparable
+
+- Likelihood ratio tests, AIC, BIC involving fixed effects: use ML
+  - `anova()` in `lme4` refits REML models with ML automatically
+- Same fixed effects, different random effects: REML is fine
+
+# Generalized Linear Mixed Models
+
+## Marginal Likelihood
+
+$y$ distributed according to an exponential family with mean $\mu$, and linear predictor
+
+$$
+g(\mu) = \eta = X \beta + Z b
+$$
+
+. . .
+
+Integral no longer known
+
+$$
+L(\beta, \phi, G) = \int_{\mathbb{R}^{q}}
+\underbrace{p(y \mid b;\, \beta, \phi)}_{\text{exp. fam.}}\,
+\underbrace{p(b;\, G)}_{N(0,\; G)}
+\; \mathrm{d}b
+$$
+
+## Common Integral Approximations
 
 :::{.incremental}
-- $\boldsymbol{\beta}$ is fixed (the population average)
-- $\boldsymbol{b}$ and $\boldsymbol{\epsilon}$ are random (properties of the *sample*)
-- all we do is conditional on $\boldsymbol{X}$
-- $\boldsymbol{y}$ just follows given the things above
+- Penalized quasi-likelihood [@breslowApproximateInferenceGeneralized1993]: very fast but crude. Implemented in `MASS::glmmPQL()`.
+- Laplace approximation [@tierneyAccurateApproximationsPosterior1986]: very good for $\beta$ but typically biased for $G$. Implemented in `lme4::glmer()` and `glmmTMB::glmmTMB()`.
+- Gaussian quadrature [@pinheiroEfficientLaplacianAdaptive2006]: useful if $G$ is a scalar and you care deeply about it. 
 :::
 
-## Need Some Kind of Nesting
+## Laplace Approximation
+
+Write the integrand as $e^{h(b)}$, with
 
 $$
-y_{ij} = \boldsymbol{x}_{ij}^{T} \boldsymbol{\beta} + \boldsymbol{z}_{ij}^{T} \boldsymbol{b}_{i} + \epsilon_{ij}
+h(b) = \log p(y \mid b;\, \beta, \phi) + \log p(b;\, G)
 $$
 
+. . .
 
-# Approximate Estimation
+Second-order Taylor expansion of the exponent around the mode $\hat{b}$, where $\nabla h(\hat{b}) = 0$:
 
-# Numerical Issues
+$$
+h(b) \approx h(\hat{b}) - \frac{1}{2} (b - \hat{b})^{T} H (b - \hat{b})
+$$
+
+with $H = -\nabla^{2} h(\hat{b}) = Z^{T} W Z + G^{-1}$ and $W$ the diagonal GLM weights at $\hat{b}$
+
+## Laplace Approximation
+
+The integrand is now a Gaussian kernel
+
+$$
+\begin{aligned}
+L(\beta, \phi, G) &\approx e^{h(\hat{b})} \int_{\mathbb{R}^{q}} e^{-\frac{1}{2} (b - \hat{b})^{T} H (b - \hat{b})} \, \mathrm{d}b \\
+&= e^{h(\hat{b})} \, (2\pi)^{q/2} \, \lvert H \rvert^{-1/2}
+\end{aligned}
+$$
+
+. . .
+
+Taking $-2 \log$:
+
+$$
+\begin{aligned}
+-2 \ell(\beta, \phi, G) \approx\; & \underbrace{-2 \log p(y \mid \hat{b};\, \beta, \phi) + \hat{b}^{T} G^{-1} \hat{b}}_{\text{penalized deviance}} \\
+& + \log \lvert G \rvert + \log \lvert Z^{T} W Z + G^{-1} \rvert
+\end{aligned}
+$$
+
+## Same Form as the LMM
+
+For the LMM, $h(b)$ is exactly quadratic in $b$, so the formula is exact, with
+
+$$
+-2 \log p(y \mid \hat{b};\, \beta, \sigma^{2}) = n \log 2\pi\sigma^{2} + \lVert y - X\beta - Z\hat{b} \rVert^{2} / \sigma^{2}
+$$
+
+$W = I / \sigma^{2}$, and $\hat{b}$ the penalized least squares solution from before
+
+. . .
+
+- GLMM: approximate, with $\hat{b}$ the conditional mode (assume for now that we have it)
+- Accurate when $p(b \mid y)$ is close to Gaussian; worse with few, binary observations per cluster
+
+## Finding the Conditional Mode {.smaller}
+
+Penalized iteratively reweighted least squares (PIRLS) for given $\beta$, $G$, from $b^{(0)} = 0$:
+
+1. $\eta = X\beta + Zb^{(k)}$, $\mu = g^{-1}(\eta)$
+2. $z_{i} = (Zb^{(k)})_{i} + (y_{i} - \mu_{i})\, g'(\mu_{i})$, $\; w_{i} = 1 / \{\phi\, V(\mu_{i})\, g'(\mu_{i})^{2}\}$
+3. Solve $\left(Z^{T} W Z + G^{-1}\right) b^{(k+1)} = Z^{T} W z$
+4. Repeat until the penalized deviance converges
+
+. . .
+
+- Each step is the LMM problem, with weights $W$ and response $z$
+- Runs inside every evaluation of the Laplace likelihood; an outer optimizer handles $\beta$ and $G$
+
+# Implementation Details You Need to Know
+
+## lme4
+
+- Handles crossed and nested random effects without problem.
+- Laplace approximation for GLMMs, quadrature available with a single random effect.
+- Very well tested, [actively maintained](https://github.com/lme4/lme4/) and documented [@batesFittingLinearMixedEffects2015].
+- Limited support for complications like correlated residuals, heteroscedasticity, modeling of scale and shape parameters, etc.
+
+## Sparse Matrices in lme4
+
+Imagine we follow students over time, nested within schools, and that students may change school.
+
+```{r}
+#| echo: false
+# Add school membership to dat: students start in a random school and
+# move to a new random school at each later visit with probability 0.3
+set.seed(12)
+n_school <- 40
+school_eff <- rnorm(n_school, sd = 2)
+
+dat_school <- dat |>
+  group_by(id) |>
+  mutate(school = accumulate(
+    runif(n() - 1) < 0.3,
+    \(s, move) if (move) sample(n_school, 1) else s,
+    .init = sample(n_school, 1)
+  )) |>
+  ungroup() |>
+  mutate(y = y + school_eff[school], school = factor(school))
+```
+
+```{r}
+#| echo: true
+mod_school <- lmer(y ~ x + (x | id) + (1 | school), data = dat_school)
+```
+
+. . .
+
+In `nlme`, crossed effects need a dummy grouping factor spanning all observations
+
+```{r}
+#| echo: true
+#| eval: false
+dat_school$all <- factor(1)
+lme(y ~ x, data = dat_school,
+    random = list(all = pdIdent(~ 0 + school), id = ~ x))
+```
+
+## Sparse Matrices in lme4
+
+```{r}
+#| echo: false
+#| fig-height: 5
+# lme4: only the nonzero entries of Z are stored
+Z <- getME(mod_school, "Z")
+n_id_cols <- 2 * nlevels(dat_school$id)
+
+lme4_df <- as.data.frame(summary(Z)) |>
+  as_tibble() |>
+  transmute(row = i, col = j, value = if_else(j <= n_id_cols, "Student", "School"))
+
+# nlme: student intercept and slope columns, plus one dense indicator
+# column per school, with every zero stored
+nlme_df <- expand_grid(
+  row = seq_len(nrow(dat_school)),
+  col = seq_len(2 + nlevels(dat_school$school))
+) |>
+  mutate(value = case_when(
+    col <= 2 ~ "Student",
+    as.integer(dat_school$school)[row] == col - 2 ~ "School",
+    .default = "Stored zero"
+  ))
+
+labs_pkg <- c(
+  lme4 = str_glue("lme4, sparse: {scales::comma(nrow(lme4_df))} values stored"),
+  nlme = str_glue("nlme, dense: {scales::comma(nrow(nlme_df))} values stored")
+)
+
+bind_rows(lme4 = lme4_df, nlme = nlme_df, .id = "package") |>
+  mutate(package = labs_pkg[package]) |>
+  ggplot(aes(col, row, fill = value)) +
+  geom_raster() +
+  facet_grid(~ package, scales = "free_x") +
+  scale_y_reverse(expand = c(0, 0)) +
+  scale_x_continuous(expand = c(0, 0)) +
+  scale_fill_manual(
+    values = c(Student = "#2a78d6", School = "#eb6834", `Stored zero` = "grey88"),
+    breaks = c("Student", "School", "Stored zero")
+  ) +
+  labs(x = "Column", y = "Observation", fill = NULL) +
+  theme_minimal(base_size = 18) +
+  theme(
+    panel.grid = element_blank(),
+    legend.position = "bottom",
+    panel.border = element_rect(fill = NA, colour = "grey60")
+  )
+```
+
+## glmmTMB
+
+- Also widely used and well documented [@brooksGlmmTMBBalancesSpeed2017].
+- Much more extensible than `lme4` but perhaps slower?
+- Sparse matrices like `lme4`.
+- Uses automatic differentiation.
+
+## nlme
+
+- Conditionally Gaussian models, including non-linear models.
+- Dense matrices, so crossed random effects work poorly.
+- No active development, but part of the "recommended" R packages.
+- Use only if you have to, `lme4` and `glmmTMB` are better options.
+
+## brms
+
+- Deterministic iterative algorithms used by `lme4` and `glmmTMB` will eventually crash or just hang when your models get complex enough.
+- `brms` [@burknerBrmsPackageBayesian2017] is an R interface to Stan with `lme4`-like syntax.
+- Dynamic Hamiltonian Monte Carlo (NUTS) scales very well with increasing parameter dimensions.
+
+# Questions? Comments?
+
+## References

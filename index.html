@@ -34,7 +34,92 @@
       margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
       vertical-align: middle;
     }
-  </style>
+    /* CSS for syntax highlighting */
+    html { -webkit-text-size-adjust: 100%; }
+    pre > code.sourceCode { white-space: pre; position: relative; }
+    pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+    pre > code.sourceCode > span:empty { height: 1.2em; }
+    .sourceCode { overflow: visible; }
+    code.sourceCode > span { color: inherit; text-decoration: inherit; }
+    div.sourceCode { margin: 1em 0; }
+    pre.sourceCode { margin: 0; }
+    @media screen {
+    div.sourceCode { overflow: auto; }
+    }
+    @media print {
+    pre > code.sourceCode { white-space: pre-wrap; }
+    pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+    }
+    pre.numberSource code
+      { counter-reset: source-line 0; }
+    pre.numberSource code > span
+      { position: relative; left: -4em; counter-increment: source-line; }
+    pre.numberSource code > span > a:first-child::before
+      { content: counter(source-line);
+        position: relative; left: -1em; text-align: right; vertical-align: baseline;
+        border: none; display: inline-block;
+        -webkit-touch-callout: none; -webkit-user-select: none;
+        -khtml-user-select: none; -moz-user-select: none;
+        -ms-user-select: none; user-select: none;
+        padding: 0 4px; width: 4em;
+        color: #aaaaaa;
+      }
+    pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+    div.sourceCode
+      { color: #003b4f; background-color: #f1f3f5; }
+    @media screen {
+    pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+    }
+    code span { color: #003b4f; } /* Normal */
+    code span.al { color: #ad0000; } /* Alert */
+    code span.an { color: #5e5e5e; } /* Annotation */
+    code span.at { color: #657422; } /* Attribute */
+    code span.bn { color: #ad0000; } /* BaseN */
+    code span.bu { } /* BuiltIn */
+    code span.cf { color: #003b4f; font-weight: bold; } /* ControlFlow */
+    code span.ch { color: #20794d; } /* Char */
+    code span.cn { color: #8f5902; } /* Constant */
+    code span.co { color: #5e5e5e; } /* Comment */
+    code span.cv { color: #5e5e5e; font-style: italic; } /* CommentVar */
+    code span.do { color: #5e5e5e; font-style: italic; } /* Documentation */
+    code span.dt { color: #ad0000; } /* DataType */
+    code span.dv { color: #ad0000; } /* DecVal */
+    code span.er { color: #ad0000; } /* Error */
+    code span.ex { } /* Extension */
+    code span.fl { color: #ad0000; } /* Float */
+    code span.fu { color: #4758ab; } /* Function */
+    code span.im { color: #00769e; } /* Import */
+    code span.in { color: #5e5e5e; } /* Information */
+    code span.kw { color: #003b4f; font-weight: bold; } /* Keyword */
+    code span.op { color: #5e5e5e; } /* Operator */
+    code span.ot { color: #003b4f; } /* Other */
+    code span.pp { color: #ad0000; } /* Preprocessor */
+    code span.sc { color: #5e5e5e; } /* SpecialChar */
+    code span.ss { color: #20794d; } /* SpecialString */
+    code span.st { color: #20794d; } /* String */
+    code span.va { color: #111111; } /* Variable */
+    code span.vs { color: #20794d; } /* VerbatimString */
+    code span.wa { color: #5e5e5e; font-style: italic; } /* Warning */
+    /* CSS for citations */
+    div.csl-bib-body { }
+    div.csl-entry {
+      clear: both;
+    }
+    .hanging-indent div.csl-entry {
+      margin-left:2em;
+      text-indent:-2em;
+    }
+    div.csl-left-margin {
+      min-width:2em;
+      float:left;
+    }
+    div.csl-right-inline {
+      margin-left:2em;
+      padding-left:1em;
+    }
+    div.csl-indent {
+      margin-left: 2em;
+    }  </style>
   <link rel="stylesheet" href="index_files/libs/revealjs/dist/theme/quarto-2740581606dc327e82f18f789b69d8a0.css">
   <link href="index_files/libs/revealjs/plugin/quarto-line-highlight/line-highlight.css" rel="stylesheet">
   <link href="index_files/libs/revealjs/plugin/reveal-menu/menu.css" rel="stylesheet">
@@ -127,6 +212,16 @@
       margin-right: 0; 
     }
   </style>
+  <script>
+    // Use MathJax's SVG output instead of HTML-CSS, which renders poorly in reveal.js
+    window.MathJax = {
+      AuthorInit: function () {
+        MathJax.Hub.Register.StartupHook("End Jax", function () {
+          return MathJax.Hub.setRenderer("SVG");
+        });
+      }
+    };
+  </script>
 </head>
 <body class="quarto-light">
   <div class="reveal">
@@ -145,37 +240,377 @@
 
 </section>
 <section>
-<section id="maximum-marginal-likelihood-and-reml" class="title-slide slide level1 center">
-<h1>Maximum Marginal Likelihood and REML</h1>
+<section id="linear-mixed-models" class="title-slide slide level1 center">
+<h1>Linear Mixed Models</h1>
 
 </section>
+<section id="data" class="slide level2">
+<h2>Data</h2>
+
+<img data-src="index_files/figure-revealjs/unnamed-chunk-3-1.png" width="960" class="r-stretch"></section>
+<section id="clustered-data" class="slide level2">
+<h2>Clustered Data</h2>
+
+<img data-src="index_files/figure-revealjs/unnamed-chunk-4-1.png" width="960" class="r-stretch"></section>
 <section id="linear-mixed-model" class="slide level2">
 <h2>Linear Mixed Model</h2>
 <p><span class="math display">\[
-\boldsymbol{y} = \boldsymbol{X} \boldsymbol{\beta} + \boldsymbol{Z} \boldsymbol{b} + \boldsymbol{\epsilon}
+y_{ij} = \beta_{0} + b_{0i} + (\beta + b_{i}) x_{ij} + \epsilon_{ij}
 \]</span></p>
+<div class="fragment">
+<p>in matrix form</p>
+<p><span class="math display">\[
+y = X \beta + Z b + \epsilon
+\]</span></p>
+</div>
+<div class="fragment">
+<p>in <code>lme4</code></p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="" aria-label="1"></a><span class="fu">library</span>(lme4)</span>
+<span id="cb1-2"><a href="" aria-label="2"></a>mod <span class="ot">&lt;-</span> <span class="fu">lmer</span>(y <span class="sc">~</span> x <span class="sc">+</span> (x <span class="sc">|</span> id), <span class="at">data =</span> dat)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</div>
+</section>
+<section id="fixed-effect-matrix" class="slide level2">
+<h2>Fixed Effect Matrix</h2>
+<p><span class="math display">\[
+y = X \beta + Z b + \epsilon
+\]</span></p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="" aria-label="1"></a>X <span class="ot">&lt;-</span> <span class="fu">getME</span>(mod, <span class="st">"X"</span>)</span>
+<span id="cb2-2"><a href="" aria-label="2"></a><span class="fu">dim</span>(X)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 306   2</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="" aria-label="1"></a>X[<span class="dv">1</span><span class="sc">:</span><span class="dv">8</span>, ]</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>  (Intercept)          x
+1           1 11.0371783
+2           1 12.3296107
+3           1  0.1165436
+4           1  1.4868636
+5           1  2.0233955
+6           1  8.7303269
+7           1  5.7200546
+8           1  5.8834378</code></pre>
+</div>
+</div>
+</section>
+<section id="random-effect-matrix" class="slide level2">
+<h2>Random Effect Matrix</h2>
+<p><span class="math display">\[
+y = X \beta + Z b + \epsilon
+\]</span></p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="" aria-label="1"></a>Z <span class="ot">&lt;-</span> <span class="fu">getME</span>(mod, <span class="st">"Z"</span>)</span>
+<span id="cb6-2"><a href="" aria-label="2"></a><span class="fu">dim</span>(Z)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 306 200</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb8"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="" aria-label="1"></a>Z[<span class="dv">1</span><span class="sc">:</span><span class="dv">8</span>, <span class="dv">1</span><span class="sc">:</span><span class="dv">6</span>]</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>8 x 6 sparse Matrix of class "dgCMatrix"
+  1        1 2         2 3        3
+1 1 11.03718 . .         . .       
+2 1 12.32961 . .         . .       
+3 .  .       1 0.1165436 . .       
+4 .  .       1 1.4868636 . .       
+5 .  .       . .         1 2.023396
+6 .  .       . .         . .       
+7 .  .       . .         . .       
+8 .  .       . .         . .       </code></pre>
+</div>
+</div>
+</section>
+<section id="estimation" class="slide level2">
+<h2>Estimation</h2>
+<p>Given <span class="math inline">\(b \sim N(0, G)\)</span> and <span class="math inline">\(\epsilon \sim N(0, \sigma^{2} I)\)</span>, <span class="math inline">\(\hat{\beta}\)</span> and <span class="math inline">\(\hat{b}\)</span> solve the penalized least squares problem</p>
+<p><span class="math display">\[
+\min_{\beta,\, b} \; \lVert y - X\beta - Zb \rVert^{2} + \sigma^{2}\, b^{T} G^{-1} b
+\]</span></p>
+</section>
+<section id="estimation-1" class="slide level2">
+<h2>Estimation</h2>
+<p>Henderson’s mixed model equations <span class="citation" data-cites="hendersonBestLinearUnbiased1975">(<a href="#/references" role="doc-biblioref" onclick="">Henderson 1975</a>)</span></p>
+<p><span class="math display">\[
+\begin{bmatrix}
+X^{T}X &amp; X^{T}Z \\
+Z^{T}X &amp; Z^{T}Z + \sigma^{2} G^{-1}
+\end{bmatrix}
+\begin{bmatrix}
+\hat{\beta} \\
+\hat{b}
+\end{bmatrix}
+=
+\begin{bmatrix}
+X^{T}y \\
+Z^{T}y
+\end{bmatrix}
+\]</span></p>
+<div class="fragment">
 <ul>
-<li class="fragment"><span class="math inline">\(\boldsymbol{\beta}\)</span> is fixed (the population average)</li>
-<li class="fragment"><span class="math inline">\(\boldsymbol{b}\)</span> and <span class="math inline">\(\boldsymbol{\epsilon}\)</span> are random (properties of the <em>sample</em>)</li>
-<li class="fragment">all we do is conditional on <span class="math inline">\(\boldsymbol{X}\)</span></li>
-<li class="fragment"><span class="math inline">\(\boldsymbol{y}\)</span> just follows given the things above</li>
+<li>The ridge penalty on <span class="math inline">\(b\)</span> makes the system nonsingular</li>
+<li>But the penalty depends on <span class="math inline">\(G\)</span> and <span class="math inline">\(\sigma^{2}\)</span>, which are unknown</li>
+</ul>
+</div>
+</section>
+<section id="marginal-likelihood" class="slide level2">
+<h2>Marginal Likelihood</h2>
+<p>Integrate out the random effects</p>
+<p><span class="math display">\[
+L(\beta, \sigma^{2}, G) = \int_{\mathbb{R}^{q}}
+\underbrace{p(y \mid b;\, \beta, \sigma^{2})}_{N(X\beta + Zb,\; \sigma^{2} I)}\,
+\underbrace{p(b;\, G)}_{N(0,\; G)}
+\; \mathrm{d}b
+\]</span></p>
+<div class="fragment">
+<p>Closed form: <span class="math inline">\(y \sim N(X\beta,\, ZGZ^{T} + \sigma^{2} I)\)</span></p>
+</div>
+<div class="fragment">
+<ul>
+<li><span class="math inline">\(b\)</span> is integrated out: maximize over <span class="math inline">\(\beta\)</span>, <span class="math inline">\(\sigma^{2}\)</span> and <span class="math inline">\(G\)</span> alone</li>
+</ul>
+</div>
+</section>
+<section id="maximum-marginal-likelihood" class="slide level2">
+<h2>Maximum Marginal Likelihood</h2>
+<p>With <span class="math inline">\(\theta = (\sigma^{2}, G)\)</span> and <span class="math inline">\(V_{\theta} = ZGZ^{T} + \sigma^{2} I\)</span></p>
+<p><span class="math display">\[
+\begin{aligned}
+&amp;-2 \ell_{\text{ML}}(\beta, \theta) = \\
+&amp; n \log 2\pi + \log \lvert V_{\theta} \rvert + (y - X\beta)^{T} V_{\theta}^{-1} (y - X\beta)
+\end{aligned}
+\]</span></p>
+<div class="fragment">
+<p>For given <span class="math inline">\(\theta\)</span>, the maximizer over <span class="math inline">\(\beta\)</span> is the GLS estimate</p>
+<p><span class="math display">\[
+\hat{\beta}_{\theta} = \left(X^{T} V_{\theta}^{-1} X\right)^{-1} X^{T} V_{\theta}^{-1} y
+\]</span></p>
+</div>
+<div class="fragment">
+<ul>
+<li>Plug in <span class="math inline">\(\hat{\beta}_{\theta}\)</span> and optimize the profile likelihood over <span class="math inline">\(\theta\)</span> only</li>
+</ul>
+</div>
+</section>
+<section id="restricted-maximum-likelihood" class="slide level2">
+<h2>Restricted Maximum Likelihood</h2>
+<p>Integrate out <span class="math inline">\(\beta\)</span> too <span class="citation" data-cites="harvilleBayesianInferenceVariance1974">(<a href="#/references" role="doc-biblioref" onclick="">Harville 1974</a>)</span></p>
+<p><span class="math display">\[
+L_{\text{REML}}(\theta) = \int_{\mathbb{R}^{p}} L(\beta, \theta) \, \mathrm{d}\beta
+\]</span></p>
+<div class="fragment">
+<p><span class="math display">\[
+\begin{aligned}
+&amp; -2 \ell_{\text{REML}}(\theta) = \\
+&amp;-2 \ell_{\text{ML}}(\hat{\beta}_{\theta}, \theta) + \log \lvert X^{T} V_{\theta}^{-1} X \rvert - p \log 2\pi
+\end{aligned}
+\]</span></p>
+</div>
+<div class="fragment">
+<ul>
+<li>ML ignores that <span class="math inline">\(\beta\)</span> is estimated: variance components biased downward, like <span class="math inline">\(\text{RSS}/n\)</span> vs.&nbsp;<span class="math inline">\(\text{RSS}/(n - p)\)</span></li>
+<li>Matters with few clusters or many fixed effects</li>
+</ul>
+</div>
+</section>
+<section id="reml-and-model-comparison" class="slide level2">
+<h2>REML and Model Comparison</h2>
+<p>REML likelihoods are not comparable</p>
+<ul>
+<li>Likelihood ratio tests, AIC, BIC involving fixed effects: use ML
+<ul>
+<li><code>anova()</code> in <code>lme4</code> refits REML models with ML automatically</li>
+</ul></li>
+<li>Same fixed effects, different random effects: REML is fine</li>
+</ul>
+</section></section>
+<section>
+<section id="generalized-linear-mixed-models" class="title-slide slide level1 center">
+<h1>Generalized Linear Mixed Models</h1>
+
+</section>
+<section id="marginal-likelihood-1" class="slide level2">
+<h2>Marginal Likelihood</h2>
+<p><span class="math inline">\(y\)</span> distributed according to an exponential family with mean <span class="math inline">\(\mu\)</span>, and linear predictor</p>
+<p><span class="math display">\[
+g(\mu) = \eta = X \beta + Z b
+\]</span></p>
+<div class="fragment">
+<p>Integral no longer known</p>
+<p><span class="math display">\[
+L(\beta, \phi, G) = \int_{\mathbb{R}^{q}}
+\underbrace{p(y \mid b;\, \beta, \phi)}_{\text{exp. fam.}}\,
+\underbrace{p(b;\, G)}_{N(0,\; G)}
+\; \mathrm{d}b
+\]</span></p>
+</div>
+</section>
+<section id="common-integral-approximations" class="slide level2">
+<h2>Common Integral Approximations</h2>
+<ul>
+<li class="fragment">Penalized quasi-likelihood <span class="citation" data-cites="breslowApproximateInferenceGeneralized1993">(<a href="#/references" role="doc-biblioref" onclick="">Breslow and Clayton 1993</a>)</span>: very fast but crude. Implemented in <code>MASS::glmmPQL()</code>.</li>
+<li class="fragment">Laplace approximation <span class="citation" data-cites="tierneyAccurateApproximationsPosterior1986">(<a href="#/references" role="doc-biblioref" onclick="">Tierney and Kadane 1986</a>)</span>: very good for <span class="math inline">\(\beta\)</span> but typically biased for <span class="math inline">\(G\)</span>. Implemented in <code>lme4::glmer()</code> and <code>glmmTMB::glmmTMB()</code>.</li>
+<li class="fragment">Gaussian quadrature <span class="citation" data-cites="pinheiroEfficientLaplacianAdaptive2006">(<a href="#/references" role="doc-biblioref" onclick="">Pinheiro and Chao 2006</a>)</span>: useful if <span class="math inline">\(G\)</span> is a scalar and you care deeply about it.</li>
 </ul>
 </section>
-<section id="need-some-kind-of-nesting" class="slide level2">
-<h2>Need Some Kind of Nesting</h2>
+<section id="laplace-approximation" class="slide level2">
+<h2>Laplace Approximation</h2>
+<p>Write the integrand as <span class="math inline">\(e^{h(b)}\)</span>, with</p>
 <p><span class="math display">\[
-y_{ij} = \boldsymbol{x}_{ij}^{T} \boldsymbol{\beta} + \boldsymbol{z}_{ij}^{T} \boldsymbol{b}_{i} + \epsilon_{ij}
+h(b) = \log p(y \mid b;\, \beta, \phi) + \log p(b;\, G)
 \]</span></p>
+<div class="fragment">
+<p>Second-order Taylor expansion of the exponent around the mode <span class="math inline">\(\hat{b}\)</span>, where <span class="math inline">\(\nabla h(\hat{b}) = 0\)</span>:</p>
+<p><span class="math display">\[
+h(b) \approx h(\hat{b}) - \frac{1}{2} (b - \hat{b})^{T} H (b - \hat{b})
+\]</span></p>
+<p>with <span class="math inline">\(H = -\nabla^{2} h(\hat{b}) = Z^{T} W Z + G^{-1}\)</span> and <span class="math inline">\(W\)</span> the diagonal GLM weights at <span class="math inline">\(\hat{b}\)</span></p>
+</div>
+</section>
+<section id="laplace-approximation-1" class="slide level2">
+<h2>Laplace Approximation</h2>
+<p>The integrand is now a Gaussian kernel</p>
+<p><span class="math display">\[
+\begin{aligned}
+L(\beta, \phi, G) &amp;\approx e^{h(\hat{b})} \int_{\mathbb{R}^{q}} e^{-\frac{1}{2} (b - \hat{b})^{T} H (b - \hat{b})} \, \mathrm{d}b \\
+&amp;= e^{h(\hat{b})} \, (2\pi)^{q/2} \, \lvert H \rvert^{-1/2}
+\end{aligned}
+\]</span></p>
+<div class="fragment">
+<p>Taking <span class="math inline">\(-2 \log\)</span>:</p>
+<p><span class="math display">\[
+\begin{aligned}
+-2 \ell(\beta, \phi, G) \approx\; &amp; \underbrace{-2 \log p(y \mid \hat{b};\, \beta, \phi) + \hat{b}^{T} G^{-1} \hat{b}}_{\text{penalized deviance}} \\
+&amp; + \log \lvert G \rvert + \log \lvert Z^{T} W Z + G^{-1} \rvert
+\end{aligned}
+\]</span></p>
+</div>
+</section>
+<section id="same-form-as-the-lmm" class="slide level2">
+<h2>Same Form as the LMM</h2>
+<p>For the LMM, <span class="math inline">\(h(b)\)</span> is exactly quadratic in <span class="math inline">\(b\)</span>, so the formula is exact, with</p>
+<p><span class="math display">\[
+-2 \log p(y \mid \hat{b};\, \beta, \sigma^{2}) = n \log 2\pi\sigma^{2} + \lVert y - X\beta - Z\hat{b} \rVert^{2} / \sigma^{2}
+\]</span></p>
+<p><span class="math inline">\(W = I / \sigma^{2}\)</span>, and <span class="math inline">\(\hat{b}\)</span> the penalized least squares solution from before</p>
+<div class="fragment">
+<ul>
+<li>GLMM: approximate, with <span class="math inline">\(\hat{b}\)</span> the conditional mode (assume for now that we have it)</li>
+<li>Accurate when <span class="math inline">\(p(b \mid y)\)</span> is close to Gaussian; worse with few, binary observations per cluster</li>
+</ul>
+</div>
+</section>
+<section id="finding-the-conditional-mode" class="slide level2 smaller">
+<h2>Finding the Conditional Mode</h2>
+<p>Penalized iteratively reweighted least squares (PIRLS) for given <span class="math inline">\(\beta\)</span>, <span class="math inline">\(G\)</span>, from <span class="math inline">\(b^{(0)} = 0\)</span>:</p>
+<ol type="1">
+<li><span class="math inline">\(\eta = X\beta + Zb^{(k)}\)</span>, <span class="math inline">\(\mu = g^{-1}(\eta)\)</span></li>
+<li><span class="math inline">\(z_{i} = (Zb^{(k)})_{i} + (y_{i} - \mu_{i})\, g'(\mu_{i})\)</span>, <span class="math inline">\(\; w_{i} = 1 / \{\phi\, V(\mu_{i})\, g'(\mu_{i})^{2}\}\)</span></li>
+<li>Solve <span class="math inline">\(\left(Z^{T} W Z + G^{-1}\right) b^{(k+1)} = Z^{T} W z\)</span></li>
+<li>Repeat until the penalized deviance converges</li>
+</ol>
+<div class="fragment">
+<ul>
+<li>Each step is the LMM problem, with weights <span class="math inline">\(W\)</span> and response <span class="math inline">\(z\)</span></li>
+<li>Runs inside every evaluation of the Laplace likelihood; an outer optimizer handles <span class="math inline">\(\beta\)</span> and <span class="math inline">\(G\)</span></li>
+</ul>
+</div>
 </section></section>
-<section id="approximate-estimation" class="title-slide slide level1 center">
-<h1>Approximate Estimation</h1>
+<section>
+<section id="implementation-details-you-need-to-know" class="title-slide slide level1 center">
+<h1>Implementation Details You Need to Know</h1>
 
 </section>
+<section id="lme4" class="slide level2">
+<h2>lme4</h2>
+<ul>
+<li>Handles crossed and nested random effects without problem.</li>
+<li>Laplace approximation for GLMMs, quadrature available with a single random effect.</li>
+<li>Very well tested, <a href="https://github.com/lme4/lme4/">actively maintained</a> and documented <span class="citation" data-cites="batesFittingLinearMixedEffects2015">(<a href="#/references" role="doc-biblioref" onclick="">Bates et al. 2015</a>)</span>.</li>
+<li>Limited support for complications like correlated residuals, heteroscedasticity, modeling of scale and shape parameters, etc.</li>
+</ul>
+</section>
+<section id="sparse-matrices-in-lme4" class="slide level2">
+<h2>Sparse Matrices in lme4</h2>
+<p>Imagine we follow students over time, nested within schools, and that students may change school.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb10"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="" aria-label="1"></a>mod_school <span class="ot">&lt;-</span> <span class="fu">lmer</span>(y <span class="sc">~</span> x <span class="sc">+</span> (x <span class="sc">|</span> id) <span class="sc">+</span> (<span class="dv">1</span> <span class="sc">|</span> school), <span class="at">data =</span> dat_school)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<div class="fragment">
+<p>In <code>nlme</code>, crossed effects need a dummy grouping factor spanning all observations</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb11"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="" aria-label="1"></a>dat_school<span class="sc">$</span>all <span class="ot">&lt;-</span> <span class="fu">factor</span>(<span class="dv">1</span>)</span>
+<span id="cb11-2"><a href="" aria-label="2"></a><span class="fu">lme</span>(y <span class="sc">~</span> x, <span class="at">data =</span> dat_school,</span>
+<span id="cb11-3"><a href="" aria-label="3"></a>    <span class="at">random =</span> <span class="fu">list</span>(<span class="at">all =</span> <span class="fu">pdIdent</span>(<span class="sc">~</span> <span class="dv">0</span> <span class="sc">+</span> school), <span class="at">id =</span> <span class="sc">~</span> x))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</div>
+</section>
+<section id="sparse-matrices-in-lme4-1" class="slide level2">
+<h2>Sparse Matrices in lme4</h2>
 
-<section id="numerical-issues" class="title-slide slide level1 center">
-<h1>Numerical Issues</h1>
+<img data-src="index_files/figure-revealjs/unnamed-chunk-11-1.png" width="960" class="r-stretch"></section>
+<section id="glmmtmb" class="slide level2">
+<h2>glmmTMB</h2>
+<ul>
+<li>Also widely used and well documented <span class="citation" data-cites="brooksGlmmTMBBalancesSpeed2017">(<a href="#/references" role="doc-biblioref" onclick="">Brooks et al. 2017</a>)</span>.</li>
+<li>Much more extensible than <code>lme4</code> but perhaps slower?</li>
+<li>Sparse matrices like <code>lme4</code>.</li>
+<li>Uses automatic differentiation.</li>
+</ul>
+</section>
+<section id="nlme" class="slide level2">
+<h2>nlme</h2>
+<ul>
+<li>Conditionally Gaussian models, including non-linear models.</li>
+<li>Dense matrices, so crossed random effects work poorly.</li>
+<li>No active development, but part of the “recommended” R packages.</li>
+<li>Use only if you have to, <code>lme4</code> and <code>glmmTMB</code> are better options.</li>
+</ul>
+</section>
+<section id="brms" class="slide level2">
+<h2>brms</h2>
+<ul>
+<li>Deterministic iterative algorithms used by <code>lme4</code> and <code>glmmTMB</code> will eventually crash or just hang when your models get complex enough.</li>
+<li><code>brms</code> <span class="citation" data-cites="burknerBrmsPackageBayesian2017">(<a href="#/references" role="doc-biblioref" onclick="">Bürkner 2017</a>)</span> is an R interface to Stan with <code>lme4</code>-like syntax.</li>
+<li>Dynamic Hamiltonian Monte Carlo (NUTS) scales very well with increasing parameter dimensions.</li>
+</ul>
+</section></section>
+<section>
+<section id="questions-comments" class="title-slide slide level1 center">
+<h1>Questions? Comments?</h1>
 
 </section>
+<section id="references" class="slide level2 smaller scrollable">
+<h2>References</h2>
+
+<div id="refs" class="references csl-bib-body hanging-indent" role="list">
+<div id="ref-batesFittingLinearMixedEffects2015" class="csl-entry" role="listitem">
+Bates, Douglas M, Martin Mächler, Ben Bolker, and Steve Walker. 2015. <span>“Fitting <span>Linear Mixed-Effects Models Using</span> Lme4.”</span> <em>Journal of Statistical Software</em> 67 (1): 1–48. <a href="https://doi.org/10.18637/jss.v067.i01">https://doi.org/10.18637/jss.v067.i01</a>.
+</div>
+<div id="ref-breslowApproximateInferenceGeneralized1993" class="csl-entry" role="listitem">
+Breslow, N. E., and D. G. Clayton. 1993. <span>“Approximate <span>Inference</span> in <span>Generalized Linear Mixed Models</span>.”</span> <em>Journal of the American Statistical Association</em> 88 (421): 9–25. <a href="https://doi.org/10.2307/2290687">https://doi.org/10.2307/2290687</a>.
+</div>
+<div id="ref-brooksGlmmTMBBalancesSpeed2017" class="csl-entry" role="listitem">
+Brooks, Mollie E., Kasper Kristensen, Koen J. van Benthem, et al. 2017. <span>“<span class="nocase">glmmTMB Balances Speed</span> and <span>Flexibility Among Packages</span> for <span>Zero</span>-Inflated <span>Generalized Linear Mixed Modeling</span>.”</span> <em>The R Journal</em> 9 (2): 378–400.
+</div>
+<div id="ref-burknerBrmsPackageBayesian2017" class="csl-entry" role="listitem">
+Bürkner, Paul-Christian. 2017. <span>“Brms: <span>An R Package</span> for <span>Bayesian Multilevel Models Using Stan</span>.”</span> <em>Journal of Statistical Software</em> 80 (1): 1–28. <a href="https://doi.org/10.18637/jss.v080.i01">https://doi.org/10.18637/jss.v080.i01</a>.
+</div>
+<div id="ref-harvilleBayesianInferenceVariance1974" class="csl-entry" role="listitem">
+Harville, David A. 1974. <span>“Bayesian Inference for Variance Components Using Only Error Contrasts.”</span> <em>Biometrika</em> 61 (2): 383–85. <a href="https://doi.org/10.1093/biomet/61.2.383">https://doi.org/10.1093/biomet/61.2.383</a>.
+</div>
+<div id="ref-hendersonBestLinearUnbiased1975" class="csl-entry" role="listitem">
+Henderson, C. R. 1975. <span>“Best <span>Linear Unbiased Estimation</span> and <span>Prediction</span> Under a <span>Selection Model</span>.”</span> <em>Biometrics</em> 31 (2): 423–47. <a href="https://doi.org/10.2307/2529430">https://doi.org/10.2307/2529430</a>.
+</div>
+<div id="ref-pinheiroEfficientLaplacianAdaptive2006" class="csl-entry" role="listitem">
+Pinheiro, José C, and Edward C Chao. 2006. <span>“Efficient <span>Laplacian</span> and <span>Adaptive Gaussian Quadrature Algorithms</span> for <span>Multilevel Generalized Linear Mixed Models</span>.”</span> <em>Journal of Computational and Graphical Statistics</em> 15 (1): 58–81. <a href="https://doi.org/10.1198/106186006X96962">https://doi.org/10.1198/106186006X96962</a>.
+</div>
+<div id="ref-tierneyAccurateApproximationsPosterior1986" class="csl-entry" role="listitem">
+Tierney, Luke, and Joseph B. Kadane. 1986. <span>“Accurate <span>Approximations</span> for <span>Posterior Moments</span> and <span>Marginal Densities</span>.”</span> <em>Journal of the American Statistical Association</em> 81 (393): 82–86. <a href="https://doi.org/10.2307/2287970">https://doi.org/10.2307/2287970</a>.
+</div>
+</div>
+</section></section>
     </div>
   <div class="quarto-auto-generated-content" style="display: none;">
 <div class="footer footer-default">
@@ -391,6 +826,44 @@ y_{ij} = \boldsymbol{x}_{ij}^{T} \boldsymbol{\beta} + \boldsymbol{z}_{ij}^{T} \b
         ]
       });
     </script>
+    
+    <script>
+      // htmlwidgets need to know to resize themselves when slides are shown/hidden.
+      // Fire the "slideenter" event (handled by htmlwidgets.js) when the current
+      // slide changes (different for each slide format).
+      (function () {
+        // dispatch for htmlwidgets
+        function fireSlideEnter() {
+          const event = window.document.createEvent("Event");
+          event.initEvent("slideenter", true, true);
+          window.document.dispatchEvent(event);
+        }
+
+        function fireSlideChanged(previousSlide, currentSlide) {
+          fireSlideEnter();
+
+          // dispatch for shiny
+          if (window.jQuery) {
+            if (previousSlide) {
+              window.jQuery(previousSlide).trigger("hidden");
+            }
+            if (currentSlide) {
+              window.jQuery(currentSlide).trigger("shown");
+            }
+          }
+        }
+
+        // hookup for slidy
+        if (window.w3c_slidy) {
+          window.w3c_slidy.add_observer(function (slide_num) {
+            // slide_num starts at position 1
+            fireSlideChanged(null, w3c_slidy.slides[slide_num - 1]);
+          });
+        }
+
+      })();
+    </script>
+
     <script id="quarto-html-after-body" type="application/javascript">
       window.document.addEventListener("DOMContentLoaded", function (event) {
         const tabsets =  window.document.querySelectorAll(".panel-tabset-tabby")

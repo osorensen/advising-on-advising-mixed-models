@@ -1,0 +1,10 @@
+<script>
+  // Use MathJax's SVG output instead of HTML-CSS, which renders poorly in reveal.js
+  window.MathJax = {
+    AuthorInit: function () {
+      MathJax.Hub.Register.StartupHook("End Jax", function () {
+        return MathJax.Hub.setRenderer("SVG");
+      });
+    }
+  };
+</script>
