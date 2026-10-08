@@ -372,6 +372,29 @@ L(\beta, \sigma^{2}, G) = \int_{\mathbb{R}^{q}}
 </ul>
 </div>
 </section>
+<section id="what-about-missing-data" class="slide level2 smaller">
+<h2>What About Missing Data?</h2>
+<p>With one grouping factor, the likelihood is a product over participants</p>
+<p><span class="math display">\[
+L(\beta, \sigma^{2}, G) = \prod_{i=1}^{m} \int p(y_{i} \mid b_{i};\, \beta, \sigma^{2})\, p(b_{i};\, G)\, \mathrm{d}b_{i}
+\]</span></p>
+<p>with <span class="math inline">\(y_{i}\)</span> the <span class="math inline">\(n_{i} \geq 1\)</span> observations participant <span class="math inline">\(i\)</span> has</p>
+<div class="fragment">
+<ul>
+<li>We integrate over unobserved <span class="math inline">\(b_{i}\)</span>, not over missing <span class="math inline">\(y\)</span>: no imputation</li>
+<li>All 306 observations are used, including 20 participants with one measurement</li>
+<li>Valid if missing at random given the model <span class="citation" data-cites="rubinInferenceMissingData1976">(<a href="#/references" role="doc-biblioref" onclick="">Rubin 1976</a>)</span>, e.g., dropout depending on earlier observed <span class="math inline">\(y\)</span></li>
+</ul>
+</div>
+</section>
+<section id="where-does-the-misconception-come-from" class="slide level2">
+<h2>Where Does the Misconception Come From?</h2>
+<ul>
+<li>Early software used the EM algorithm, which treats <span class="math inline">\(b\)</span> as missing data and fills in its conditional expectations in the E-step <span class="citation" data-cites="lairdRandomEffectsModelsLongitudinal1982">(<a href="#/references" role="doc-biblioref" onclick="">Laird and Ware 1982</a>)</span></li>
+<li>Predicted random effects <span class="math inline">\(\hat{b}_{i}\)</span> look like imputed values</li>
+<li>Missing covariates are different: <code>lmer()</code> drops those rows, losing their observed <span class="math inline">\(y\)</span>, so multiple imputation may be needed</li>
+</ul>
+</section>
 <section id="maximum-marginal-likelihood" class="slide level2">
 <h2>Maximum Marginal Likelihood</h2>
 <p>With <span class="math inline">\(\theta = (\sigma^{2}, G)\)</span> and <span class="math inline">\(V_{\theta} = ZGZ^{T} + \sigma^{2} I\)</span></p>
@@ -424,6 +447,40 @@ L_{\text{REML}}(\theta) = \int_{\mathbb{R}^{p}} L(\beta, \theta) \, \mathrm{d}\b
 </ul></li>
 <li>Same fixed effects, different random effects: REML is fine</li>
 </ul>
+</section>
+<section id="inference-in-practice" class="slide level2 smaller">
+<h2>Inference in Practice</h2>
+<p>Fixed effects</p>
+<ul>
+<li><code>lmer()</code> reports no p-values: with unbalanced data the null distribution of the <span class="math inline">\(t\)</span> statistic, and its degrees of freedom, are not known exactly</li>
+<li>Small samples: Satterthwaite (<code>lmerTest</code>) or Kenward–Roger (<code>pbkrtest</code>) degrees of freedom, based on REML <span class="citation" data-cites="kenwardSmallSampleInference1997">(<a href="#/references" role="doc-biblioref" onclick="">Kenward and Roger 1997</a>)</span></li>
+</ul>
+<p>Confidence intervals</p>
+<ul>
+<li><code>confint(mod)</code> gives profile likelihood intervals, also for the standard deviations and correlations; Wald intervals are poor for variance parameters</li>
+<li>Parametric bootstrap when in doubt: <code>confint(mod, method = "boot")</code>.</li>
+</ul>
+</section>
+<section id="testing-variance-components" class="slide level2 smaller">
+<h2>Testing Variance Components</h2>
+<ul>
+<li><span class="math inline">\(H_{0}: \sigma_{b}^{2} = 0\)</span> is on the boundary, so the LRT statistic is <span class="math inline">\(\tfrac{1}{2}\chi^{2}_{0} + \tfrac{1}{2}\chi^{2}_{1}\)</span>, not <span class="math inline">\(\chi^{2}_{1}\)</span>: halve the naive p-value</li>
+<li>Adding a correlated random slope: <span class="math inline">\(\tfrac{1}{2}\chi^{2}_{1} + \tfrac{1}{2}\chi^{2}_{2}\)</span></li>
+<li>The mixtures are asymptotic; with few clusters, use the parametric bootstrap</li>
+</ul>
+<div class="fragment">
+<p>Is there a random slope for <span class="math inline">\(x\)</span>? Same fixed effects, so REML is fine</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb10"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="" aria-label="1"></a>mod0 <span class="ot">&lt;-</span> <span class="fu">lmer</span>(y <span class="sc">~</span> x <span class="sc">+</span> (<span class="dv">1</span> <span class="sc">|</span> id), <span class="at">data =</span> dat)</span>
+<span id="cb10-2"><a href="" aria-label="2"></a>lrt <span class="ot">&lt;-</span> <span class="fu">as.numeric</span>(<span class="dv">2</span> <span class="sc">*</span> (<span class="fu">logLik</span>(mod) <span class="sc">-</span> <span class="fu">logLik</span>(mod0)))</span>
+<span id="cb10-3"><a href="" aria-label="3"></a><span class="fu">c</span>(<span class="at">naive =</span> <span class="fu">pchisq</span>(lrt, <span class="at">df =</span> <span class="dv">2</span>, <span class="at">lower.tail =</span> <span class="cn">FALSE</span>),</span>
+<span id="cb10-4"><a href="" aria-label="4"></a>  <span class="at">mixture =</span> <span class="fu">mean</span>(<span class="fu">pchisq</span>(lrt, <span class="at">df =</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">2</span>, <span class="at">lower.tail =</span> <span class="cn">FALSE</span>)))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>     naive    mixture 
+0.01665173 0.01043140 </code></pre>
+</div>
+</div>
+</div>
 </section></section>
 <section>
 <section id="generalized-linear-mixed-models" class="title-slide slide level1 center">
@@ -491,12 +548,12 @@ L(\beta, \phi, G) &amp;\approx e^{h(\hat{b})} \int_{\mathbb{R}^{q}} e^{-\frac{1}
 <h2>Same Form as the LMM</h2>
 <p>For the LMM, <span class="math inline">\(h(b)\)</span> is exactly quadratic in <span class="math inline">\(b\)</span>, so the formula is exact, with</p>
 <p><span class="math display">\[
--2 \log p(y \mid \hat{b};\, \beta, \sigma^{2}) = n \log 2\pi\sigma^{2} + \lVert y - X\beta - Z\hat{b} \rVert^{2} / \sigma^{2}
+-2 \log p(y \mid \hat{b};\, \beta, \sigma^{2}) = n \log 2\pi\sigma^{2} + \frac{\lVert y - X\beta - Z\hat{b} \rVert^{2} }{\sigma^{2}}
 \]</span></p>
 <p><span class="math inline">\(W = I / \sigma^{2}\)</span>, and <span class="math inline">\(\hat{b}\)</span> the penalized least squares solution from before</p>
 <div class="fragment">
 <ul>
-<li>GLMM: approximate, with <span class="math inline">\(\hat{b}\)</span> the conditional mode (assume for now that we have it)</li>
+<li>GLMM: approximate, with <span class="math inline">\(\hat{b}\)</span> the conditional mode</li>
 <li>Accurate when <span class="math inline">\(p(b \mid y)\)</span> is close to Gaussian; worse with few, binary observations per cluster</li>
 </ul>
 </div>
@@ -516,64 +573,133 @@ L(\beta, \phi, G) &amp;\approx e^{h(\hat{b})} \int_{\mathbb{R}^{q}} e^{-\frac{1}
 <li>Runs inside every evaluation of the Laplace likelihood; an outer optimizer handles <span class="math inline">\(\beta\)</span> and <span class="math inline">\(G\)</span></li>
 </ul>
 </div>
+</section>
+<section id="conditional-vs.-marginal-effects" class="slide level2 smaller">
+<h2>Conditional vs.&nbsp;Marginal Effects</h2>
+<p><span class="math display">\[
+E(y \mid b) = g^{-1}(X\beta + Zb), \qquad
+E(y) = \int g^{-1}(X\beta + Zb)\, p(b)\, \mathrm{d}b \neq g^{-1}(X\beta)
+\]</span></p>
+<ul>
+<li>Identity link: the two coincide, so <span class="math inline">\(\beta\)</span> is also the population-averaged effect</li>
+<li>Other links: <span class="math inline">\(\beta\)</span> is a subject-specific effect, and the population-averaged curve is flatter</li>
+</ul>
+
+<img data-src="index_files/figure-revealjs/unnamed-chunk-9-1.png" width="960" class="r-stretch"></section>
+<section id="probit-vs.-logit" class="slide level2 smaller">
+<h2>Probit vs.&nbsp;Logit</h2>
+<p>Random intercept <span class="math inline">\(b \sim N(0, \sigma_{b}^{2})\)</span>, linear predictor <span class="math inline">\(\eta = x^{T}\beta\)</span>, and <span class="math inline">\(\varepsilon \sim N(0, 1)\)</span> independent of <span class="math inline">\(b\)</span></p>
+<p>Population-averaged effect with Probit:</p>
+<p><span class="math display">\[
+E\{\Phi(\eta + b)\} = P(\varepsilon - b \leq \eta) = \Phi\left(\eta \big/ \sqrt{1 + \sigma_{b}^{2}}\right)
+\]</span></p>
+<p>Logit, approximate, using <span class="math inline">\(\operatorname{logit}^{-1}(t) \approx \Phi(t / 1.7)\)</span>:</p>
+<p><span class="math display">\[
+E\{\operatorname{logit}^{-1}(\eta + b)\} \approx \operatorname{logit}^{-1}\left(\eta \big/ \sqrt{1 + 0.346\, \sigma_{b}^{2}}\right)
+\]</span></p>
+<div class="fragment">
+<ul>
+<li>Probit: the marginal model is again a probit model, with coefficients <span class="math inline">\(\beta / \sqrt{1 + \sigma_{b}^{2}}\)</span></li>
+<li>Logit: the GLMM odds ratio is a within-patient odds ratio, not a population odds ratio</li>
+<li>With random slopes the scaling depends on the covariates, for both links</li>
+<li>Population-averaged effects: average predictions over <span class="math inline">\(b\)</span>, or fit GEE</li>
+</ul>
+</div>
 </section></section>
 <section>
-<section id="implementation-details-you-need-to-know" class="title-slide slide level1 center">
-<h1>Implementation Details You Need to Know</h1>
+<section id="numerics-and-implementation-details" class="title-slide slide level1 center">
+<h1>Numerics and Implementation Details</h1>
 
 </section>
-<section id="lme4" class="slide level2">
-<h2>lme4</h2>
-<ul>
-<li>Handles crossed and nested random effects without problem.</li>
-<li>Laplace approximation for GLMMs, quadrature available with a single random effect.</li>
-<li>Very well tested, <a href="https://github.com/lme4/lme4/">actively maintained</a> and documented <span class="citation" data-cites="batesFittingLinearMixedEffects2015">(<a href="#/references" role="doc-biblioref" onclick="">Bates et al. 2015</a>)</span>.</li>
-<li>Limited support for complications like correlated residuals, heteroscedasticity, modeling of scale and shape parameters, etc.</li>
-</ul>
-</section>
-<section id="sparse-matrices-in-lme4" class="slide level2">
-<h2>Sparse Matrices in lme4</h2>
+<section id="sparse-matrices" class="slide level2">
+<h2>Sparse Matrices</h2>
 <p>Imagine we follow students over time, nested within schools, and that students may change school.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb10"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="" aria-label="1"></a>mod_school <span class="ot">&lt;-</span> <span class="fu">lmer</span>(y <span class="sc">~</span> x <span class="sc">+</span> (x <span class="sc">|</span> id) <span class="sc">+</span> (<span class="dv">1</span> <span class="sc">|</span> school), <span class="at">data =</span> dat_school)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb12"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="" aria-label="1"></a>mod_school <span class="ot">&lt;-</span> <span class="fu">lmer</span>(y <span class="sc">~</span> x <span class="sc">+</span> (x <span class="sc">|</span> id) <span class="sc">+</span> (<span class="dv">1</span> <span class="sc">|</span> school), <span class="at">data =</span> dat_school)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 <div class="fragment">
 <p>In <code>nlme</code>, crossed effects need a dummy grouping factor spanning all observations</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb11"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="" aria-label="1"></a>dat_school<span class="sc">$</span>all <span class="ot">&lt;-</span> <span class="fu">factor</span>(<span class="dv">1</span>)</span>
-<span id="cb11-2"><a href="" aria-label="2"></a><span class="fu">lme</span>(y <span class="sc">~</span> x, <span class="at">data =</span> dat_school,</span>
-<span id="cb11-3"><a href="" aria-label="3"></a>    <span class="at">random =</span> <span class="fu">list</span>(<span class="at">all =</span> <span class="fu">pdIdent</span>(<span class="sc">~</span> <span class="dv">0</span> <span class="sc">+</span> school), <span class="at">id =</span> <span class="sc">~</span> x))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb13"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="" aria-label="1"></a>dat_school<span class="sc">$</span>all <span class="ot">&lt;-</span> <span class="fu">factor</span>(<span class="dv">1</span>)</span>
+<span id="cb13-2"><a href="" aria-label="2"></a><span class="fu">lme</span>(y <span class="sc">~</span> x, <span class="at">data =</span> dat_school,</span>
+<span id="cb13-3"><a href="" aria-label="3"></a>    <span class="at">random =</span> <span class="fu">list</span>(<span class="at">all =</span> <span class="fu">pdIdent</span>(<span class="sc">~</span> <span class="dv">0</span> <span class="sc">+</span> school), <span class="at">id =</span> <span class="sc">~</span> x))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 </div>
 </section>
-<section id="sparse-matrices-in-lme4-1" class="slide level2">
+<section id="sparse-matrices-in-lme4" class="slide level2">
 <h2>Sparse Matrices in lme4</h2>
 
-<img data-src="index_files/figure-revealjs/unnamed-chunk-11-1.png" width="960" class="r-stretch"></section>
-<section id="glmmtmb" class="slide level2">
-<h2>glmmTMB</h2>
+<img data-src="index_files/figure-revealjs/unnamed-chunk-13-1.png" width="960" class="r-stretch"></section>
+<section id="packages" class="slide level2">
+<h2>Packages</h2>
 <ul>
-<li>Also widely used and well documented <span class="citation" data-cites="brooksGlmmTMBBalancesSpeed2017">(<a href="#/references" role="doc-biblioref" onclick="">Brooks et al. 2017</a>)</span>.</li>
-<li>Much more extensible than <code>lme4</code> but perhaps slower?</li>
-<li>Sparse matrices like <code>lme4</code>.</li>
-<li>Uses automatic differentiation.</li>
+<li><code>lme4</code> <span class="citation" data-cites="batesFittingLinearMixedEffects2015">(<a href="#/references" role="doc-biblioref" onclick="">Bates et al. 2015</a>)</span>: sparse matrices; Laplace approximation; probably the fastest?</li>
+<li><code>glmmTMB</code> <span class="citation" data-cites="brooksGlmmTMBBalancesSpeed2017">(<a href="#/references" role="doc-biblioref" onclick="">Brooks et al. 2017</a>)</span>: sparse matrices; Laplace approximation; automatic differentiation; easily handles lots of different distributions.</li>
+<li><code>brms</code> <span class="citation" data-cites="burknerBrmsPackageBayesian2017">(<a href="#/references" role="doc-biblioref" onclick="">Bürkner 2017</a>)</span>: <code>lme4</code> syntax; Stan backend; generates Stan code; very flexible.</li>
+<li><code>nlme</code>: historically important; maintained but not actively developed.</li>
+</ul>
+</section></section>
+<section>
+<section id="numerical-instability" class="title-slide slide level1 center">
+<h1>Numerical Instability</h1>
+
+</section>
+<section id="singular-fits" class="slide level2 smaller">
+<h2>Singular Fits</h2>
+<p><code>boundary (singular) fit: see help('isSingular')</code></p>
+<ul>
+<li>The estimate is on the boundary: a variance of zero or a correlation of <span class="math inline">\(\pm 1\)</span></li>
+<li>A property of the likelihood for these data, not a software bug</li>
+<li>Typical with few clusters, few observations per cluster, or many variance parameters</li>
+</ul>
+<div class="fragment">
+<p>Henderson’s equations need <span class="math inline">\(G^{-1}\)</span>, which then does not exist. <code>lme4</code> instead writes <span class="math inline">\(b = \Lambda_{\theta} u\)</span> with <span class="math inline">\(u \sim N(0, \sigma^{2} I)\)</span> <span class="citation" data-cites="batesFittingLinearMixedEffects2015">(<a href="#/references" role="doc-biblioref" onclick="">Bates et al. 2015</a>)</span></p>
+<p><span class="math display">\[
+\min_{\beta,\, u} \; \lVert y - X\beta - Z\Lambda_{\theta} u \rVert^{2} + \lVert u \rVert^{2}
+\]</span></p>
+<p>so a singular <span class="math inline">\(\Lambda_{\theta}\)</span> causes no problems</p>
+</div>
+</section>
+<section id="convergence-warnings" class="slide level2 smaller">
+<h2>Convergence Warnings</h2>
+<p><code>Model failed to converge with max|grad| = 0.006 (tol = 0.002)</code></p>
+<ul>
+<li>The outer optimizer over <span class="math inline">\(\theta\)</span> (and <span class="math inline">\(\beta\)</span> for GLMMs) stopped where the gradient is not quite zero</li>
+<li>Often a false positive, especially in large data sets (see <code>?lme4::convergence</code>)</li>
+<li>Check: <code>allFit(mod)</code> refits with all available optimizers; if the estimates agree, report them</li>
+</ul>
+<div class="fragment">
+<p><code>Model is nearly unidentifiable: large eigenvalue ratio - Rescale variables?</code></p>
+<ul>
+<li>Center and scale covariates, e.g., time in decades or centered at its mean</li>
+<li>Don’t ask for more random effects than the data can support</li>
+</ul>
+</div>
+</section>
+<section id="binary-outcomes-in-small-data" class="slide level2 smaller">
+<h2>Binary Outcomes in Small Data</h2>
+<p>40 patients with 2 binary measurements each, true random intercept SD 1.5, 200 simulated data sets</p>
+
+<img data-src="index_files/figure-revealjs/unnamed-chunk-15-1.png" width="960" class="r-stretch"><p>Laplace underestimates the SD (median 1.12 vs.&nbsp;1.52 with quadrature). Singular fits occur with both methods (Laplace 4%, quadrature 4%): they come from the likelihood, not the approximation.</p>
+</section>
+<section id="what-can-we-do" class="slide level2">
+<h2>What Can We Do?</h2>
+<ul>
+<li>Treat a singular fit as information: these data cannot distinguish the variance from zero</li>
+<li>Simplify the random effects: drop correlations with <code>(x || id)</code>, or drop random slopes</li>
+<li>More accurate integral: <code>glmer(..., nAGQ = 25)</code>, available with a single random intercept</li>
+<li>Bayesian fit with <code>brms</code>: the posterior shows the full uncertainty about the SD, instead of a point estimate at zero</li>
 </ul>
 </section>
-<section id="nlme" class="slide level2">
-<h2>nlme</h2>
+<section id="take-home-messages" class="slide level2">
+<h2>Take-Home Messages</h2>
 <ul>
-<li>Conditionally Gaussian models, including non-linear models.</li>
-<li>Dense matrices, so crossed random effects work poorly.</li>
-<li>No active development, but part of the “recommended” R packages.</li>
-<li>Use only if you have to, <code>lme4</code> and <code>glmmTMB</code> are better options.</li>
-</ul>
-</section>
-<section id="brms" class="slide level2">
-<h2>brms</h2>
-<ul>
-<li>Deterministic iterative algorithms used by <code>lme4</code> and <code>glmmTMB</code> will eventually crash or just hang when your models get complex enough.</li>
-<li><code>brms</code> <span class="citation" data-cites="burknerBrmsPackageBayesian2017">(<a href="#/references" role="doc-biblioref" onclick="">Bürkner 2017</a>)</span> is an R interface to Stan with <code>lme4</code>-like syntax.</li>
-<li>Dynamic Hamiltonian Monte Carlo (NUTS) scales very well with increasing parameter dimensions.</li>
+<li>No imputation: the random effects are integrated out</li>
+<li>Missing outcomes: fine under MAR; missing covariates: not</li>
+<li>REML for variances; ML to compare fixed effects</li>
+<li>Small binary data: check Laplace against quadrature</li>
+<li>GLMM coefficients are subject-specific</li>
+<li>Singular fits and warnings tell you about the data</li>
 </ul>
 </section></section>
 <section>
@@ -603,8 +729,17 @@ Harville, David A. 1974. <span>“Bayesian Inference for Variance Components Usi
 <div id="ref-hendersonBestLinearUnbiased1975" class="csl-entry" role="listitem">
 Henderson, C. R. 1975. <span>“Best <span>Linear Unbiased Estimation</span> and <span>Prediction</span> Under a <span>Selection Model</span>.”</span> <em>Biometrics</em> 31 (2): 423–47. <a href="https://doi.org/10.2307/2529430">https://doi.org/10.2307/2529430</a>.
 </div>
+<div id="ref-kenwardSmallSampleInference1997" class="csl-entry" role="listitem">
+Kenward, Michael G., and James H. Roger. 1997. <span>“Small Sample Inference for Fixed Effects from Restricted Maximum Likelihood.”</span> <em>Biometrics</em> 53 (3): 983–97. <a href="https://doi.org/10.2307/2533558">https://doi.org/10.2307/2533558</a>.
+</div>
+<div id="ref-lairdRandomEffectsModelsLongitudinal1982" class="csl-entry" role="listitem">
+Laird, Nan M., and James H. Ware. 1982. <span>“Random-Effects Models for Longitudinal Data.”</span> <em>Biometrics</em> 38 (4): 963–74. <a href="https://doi.org/10.2307/2529876">https://doi.org/10.2307/2529876</a>.
+</div>
 <div id="ref-pinheiroEfficientLaplacianAdaptive2006" class="csl-entry" role="listitem">
 Pinheiro, José C, and Edward C Chao. 2006. <span>“Efficient <span>Laplacian</span> and <span>Adaptive Gaussian Quadrature Algorithms</span> for <span>Multilevel Generalized Linear Mixed Models</span>.”</span> <em>Journal of Computational and Graphical Statistics</em> 15 (1): 58–81. <a href="https://doi.org/10.1198/106186006X96962">https://doi.org/10.1198/106186006X96962</a>.
+</div>
+<div id="ref-rubinInferenceMissingData1976" class="csl-entry" role="listitem">
+Rubin, Donald B. 1976. <span>“Inference and Missing Data.”</span> <em>Biometrika</em> 63 (3): 581–92. <a href="https://doi.org/10.1093/biomet/63.3.581">https://doi.org/10.1093/biomet/63.3.581</a>.
 </div>
 <div id="ref-tierneyAccurateApproximationsPosterior1986" class="csl-entry" role="listitem">
 Tierney, Luke, and Joseph B. Kadane. 1986. <span>“Accurate <span>Approximations</span> for <span>Posterior Moments</span> and <span>Marginal Densities</span>.”</span> <em>Journal of the American Statistical Association</em> 81 (393): 82–86. <a href="https://doi.org/10.2307/2287970">https://doi.org/10.2307/2287970</a>.

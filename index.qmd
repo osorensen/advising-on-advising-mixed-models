@@ -180,6 +180,28 @@ Closed form: $y \sim N(X\beta,\, ZGZ^{T} + \sigma^{2} I)$
 
 - $b$ is integrated out: maximize over $\beta$, $\sigma^{2}$ and $G$ alone
 
+## What About Missing Data? {.smaller}
+
+With one grouping factor, the likelihood is a product over participants
+
+$$
+L(\beta, \sigma^{2}, G) = \prod_{i=1}^{m} \int p(y_{i} \mid b_{i};\, \beta, \sigma^{2})\, p(b_{i};\, G)\, \mathrm{d}b_{i}
+$$
+
+with $y_{i}$ the $n_{i} \geq 1$ observations participant $i$ has
+
+. . .
+
+- We integrate over unobserved $b_{i}$, not over missing $y$: no imputation
+- All `r nobs(mod)` observations are used, including `r sum(table(dat$id) == 1)` participants with one measurement
+- Valid if missing at random given the model [@rubinInferenceMissingData1976], e.g., dropout depending on earlier observed $y$
+
+## Where Does the Misconception Come From?
+
+- Early software used the EM algorithm, which treats $b$ as missing data and fills in its conditional expectations in the E-step [@lairdRandomEffectsModelsLongitudinal1982]
+- Predicted random effects $\hat{b}_{i}$ look like imputed values
+- Missing covariates are different: `lmer()` drops those rows, losing their observed $y$, so multiple imputation may be needed
+
 ## Maximum Marginal Likelihood
 
 With $\theta = (\sigma^{2}, G)$ and $V_{\theta} = ZGZ^{T} + \sigma^{2} I$
@@ -232,6 +254,36 @@ REML likelihoods are not comparable
 - Likelihood ratio tests, AIC, BIC involving fixed effects: use ML
   - `anova()` in `lme4` refits REML models with ML automatically
 - Same fixed effects, different random effects: REML is fine
+
+## Inference in Practice {.smaller}
+
+Fixed effects
+
+- `lmer()` reports no p-values: with unbalanced data the null distribution of the $t$ statistic, and its degrees of freedom, are not known exactly
+- Small samples: Satterthwaite (`lmerTest`) or Kenward–Roger (`pbkrtest`) degrees of freedom, based on REML [@kenwardSmallSampleInference1997]
+
+Confidence intervals
+
+- `confint(mod)` gives profile likelihood intervals, also for the standard deviations and correlations; Wald intervals are poor for variance parameters
+- Parametric bootstrap when in doubt: `confint(mod, method = "boot")`.
+
+## Testing Variance Components {.smaller}
+
+- $H_{0}: \sigma_{b}^{2} = 0$ is on the boundary, so the LRT statistic is $\tfrac{1}{2}\chi^{2}_{0} + \tfrac{1}{2}\chi^{2}_{1}$, not $\chi^{2}_{1}$: halve the naive p-value
+- Adding a correlated random slope: $\tfrac{1}{2}\chi^{2}_{1} + \tfrac{1}{2}\chi^{2}_{2}$
+- The mixtures are asymptotic; with few clusters, use the parametric bootstrap
+
+. . .
+
+Is there a random slope for $x$? Same fixed effects, so REML is fine
+
+```{r}
+#| echo: true
+mod0 <- lmer(y ~ x + (1 | id), data = dat)
+lrt <- as.numeric(2 * (logLik(mod) - logLik(mod0)))
+c(naive = pchisq(lrt, df = 2, lower.tail = FALSE),
+  mixture = mean(pchisq(lrt, df = 1:2, lower.tail = FALSE)))
+```
 
 # Generalized Linear Mixed Models
 
@@ -307,14 +359,14 @@ $$
 For the LMM, $h(b)$ is exactly quadratic in $b$, so the formula is exact, with
 
 $$
--2 \log p(y \mid \hat{b};\, \beta, \sigma^{2}) = n \log 2\pi\sigma^{2} + \lVert y - X\beta - Z\hat{b} \rVert^{2} / \sigma^{2}
+-2 \log p(y \mid \hat{b};\, \beta, \sigma^{2}) = n \log 2\pi\sigma^{2} + \frac{\lVert y - X\beta - Z\hat{b} \rVert^{2} }{\sigma^{2}}
 $$
 
 $W = I / \sigma^{2}$, and $\hat{b}$ the penalized least squares solution from before
 
 . . .
 
-- GLMM: approximate, with $\hat{b}$ the conditional mode (assume for now that we have it)
+- GLMM: approximate, with $\hat{b}$ the conditional mode
 - Accurate when $p(b \mid y)$ is close to Gaussian; worse with few, binary observations per cluster
 
 ## Finding the Conditional Mode {.smaller}
@@ -331,16 +383,77 @@ Penalized iteratively reweighted least squares (PIRLS) for given $\beta$, $G$, f
 - Each step is the LMM problem, with weights $W$ and response $z$
 - Runs inside every evaluation of the Laplace likelihood; an outer optimizer handles $\beta$ and $G$
 
-# Implementation Details You Need to Know
+## Conditional vs. Marginal Effects {.smaller}
 
-## lme4
+$$
+E(y \mid b) = g^{-1}(X\beta + Zb), \qquad
+E(y) = \int g^{-1}(X\beta + Zb)\, p(b)\, \mathrm{d}b \neq g^{-1}(X\beta)
+$$
 
-- Handles crossed and nested random effects without problem.
-- Laplace approximation for GLMMs, quadrature available with a single random effect.
-- Very well tested, [actively maintained](https://github.com/lme4/lme4/) and documented [@batesFittingLinearMixedEffects2015].
-- Limited support for complications like correlated residuals, heteroscedasticity, modeling of scale and shape parameters, etc.
+- Identity link: the two coincide, so $\beta$ is also the population-averaged effect
+- Other links: $\beta$ is a subject-specific effect, and the population-averaged curve is flatter
 
-## Sparse Matrices in lme4
+```{r}
+#| echo: false
+#| fig-height: 4
+# Logistic random intercept model with slope 1 and random intercept SD 2
+sd_b_marg <- 2
+x_grid <- seq(-6, 6, length.out = 200)
+
+patients <- expand_grid(b = qnorm(ppoints(15)) * sd_b_marg, x = x_grid) |>
+  mutate(p = plogis(x + b), curve = "Individual patients")
+
+marginal_p <- function(eta) {
+  integrate(\(b) plogis(eta + b) * dnorm(b, sd = sd_b_marg), -Inf, Inf)$value
+}
+
+curves <- tibble(x = x_grid) |>
+  mutate(
+    `Typical patient (b = 0)` = plogis(x),
+    `Population average` = map_dbl(x, marginal_p)
+  ) |>
+  pivot_longer(-x, names_to = "curve", values_to = "p")
+
+ggplot(mapping = aes(x, p, colour = curve)) +
+  geom_line(data = patients, aes(group = b), linewidth = 0.5) +
+  geom_line(data = curves, linewidth = 1.5) +
+  scale_colour_manual(
+    values = c(`Individual patients` = "grey75", `Typical patient (b = 0)` = "#2a78d6",
+               `Population average` = "#eb6834"),
+    breaks = c("Individual patients", "Typical patient (b = 0)", "Population average")
+  ) +
+  labs(x = "x", y = "P(y = 1)", colour = NULL) +
+  theme_minimal(base_size = 18) +
+  theme(legend.position = "bottom", panel.grid.minor = element_blank())
+```
+
+## Probit vs. Logit {.smaller}
+
+Random intercept $b \sim N(0, \sigma_{b}^{2})$, linear predictor $\eta = x^{T}\beta$, and $\varepsilon \sim N(0, 1)$ independent of $b$
+
+Population-averaged effect with Probit:
+
+$$
+E\{\Phi(\eta + b)\} = P(\varepsilon - b \leq \eta) = \Phi\left(\eta \big/ \sqrt{1 + \sigma_{b}^{2}}\right)
+$$
+
+Logit, approximate, using $\operatorname{logit}^{-1}(t) \approx \Phi(t / 1.7)$:
+
+$$
+E\{\operatorname{logit}^{-1}(\eta + b)\} \approx \operatorname{logit}^{-1}\left(\eta \big/ \sqrt{1 + 0.346\, \sigma_{b}^{2}}\right)
+$$
+
+. . .
+
+- Probit: the marginal model is again a probit model, with coefficients $\beta / \sqrt{1 + \sigma_{b}^{2}}$
+- Logit: the GLMM odds ratio is a within-patient odds ratio, not a population odds ratio
+- With random slopes the scaling depends on the covariates, for both links
+- Population-averaged effects: average predictions over $b$, or fit GEE
+
+# Numerics and Implementation Details
+
+
+## Sparse Matrices
 
 Imagine we follow students over time, nested within schools, and that students may change school.
 
@@ -430,26 +543,126 @@ bind_rows(lme4 = lme4_df, nlme = nlme_df, .id = "package") |>
   )
 ```
 
-## glmmTMB
 
-- Also widely used and well documented [@brooksGlmmTMBBalancesSpeed2017].
-- Much more extensible than `lme4` but perhaps slower?
-- Sparse matrices like `lme4`.
-- Uses automatic differentiation.
+## Packages
 
-## nlme
+- `lme4` [@batesFittingLinearMixedEffects2015]: sparse matrices; Laplace approximation; probably the fastest?
+- `glmmTMB` [@brooksGlmmTMBBalancesSpeed2017]: sparse matrices; Laplace approximation; automatic differentiation; easily handles lots of different distributions.
+- `brms` [@burknerBrmsPackageBayesian2017]: `lme4` syntax; Stan backend; generates Stan code; very flexible.
+- `nlme`: historically important; maintained but not actively developed.
 
-- Conditionally Gaussian models, including non-linear models.
-- Dense matrices, so crossed random effects work poorly.
-- No active development, but part of the "recommended" R packages.
-- Use only if you have to, `lme4` and `glmmTMB` are better options.
 
-## brms
 
-- Deterministic iterative algorithms used by `lme4` and `glmmTMB` will eventually crash or just hang when your models get complex enough.
-- `brms` [@burknerBrmsPackageBayesian2017] is an R interface to Stan with `lme4`-like syntax.
-- Dynamic Hamiltonian Monte Carlo (NUTS) scales very well with increasing parameter dimensions.
+# Numerical Instability
+
+## Singular Fits {.smaller}
+
+`boundary (singular) fit: see help('isSingular')`
+
+- The estimate is on the boundary: a variance of zero or a correlation of $\pm 1$
+- A property of the likelihood for these data, not a software bug
+- Typical with few clusters, few observations per cluster, or many variance parameters
+
+. . .
+
+Henderson's equations need $G^{-1}$, which then does not exist. `lme4` instead writes $b = \Lambda_{\theta} u$ with $u \sim N(0, \sigma^{2} I)$ [@batesFittingLinearMixedEffects2015]
+
+$$
+\min_{\beta,\, u} \; \lVert y - X\beta - Z\Lambda_{\theta} u \rVert^{2} + \lVert u \rVert^{2}
+$$
+
+so a singular $\Lambda_{\theta}$ causes no problems
+
+## Convergence Warnings {.smaller}
+
+`Model failed to converge with max|grad| = 0.006 (tol = 0.002)`
+
+- The outer optimizer over $\theta$ (and $\beta$ for GLMMs) stopped where the gradient is not quite zero
+- Often a false positive, especially in large data sets (see `?lme4::convergence`)
+- Check: `allFit(mod)` refits with all available optimizers; if the estimates agree, report them
+
+. . .
+
+`Model is nearly unidentifiable: large eigenvalue ratio - Rescale variables?`
+
+- Center and scale covariates, e.g., time in decades or centered at its mean
+- Don't ask for more random effects than the data can support
+
+## Binary Outcomes in Small Data {.smaller}
+
+40 patients with 2 binary measurements each, true random intercept SD 1.5, 200 simulated data sets
+
+```{r}
+#| echo: false
+#| cache: true
+# Estimated random intercept SD, or NA if the fit fails
+glmer_sd <- possibly(function(d, ...) {
+  f <- suppressWarnings(suppressMessages(
+    glmer(y ~ time + (1 | id), data = d, family = binomial, ...)
+  ))
+  sqrt(VarCorr(f)$id[1, 1])
+}, otherwise = NA_real_)
+
+set.seed(2026)
+n_pat <- 40
+sd_b_true <- 1.5
+
+sim_bin <- map(1:200, \(rep) {
+  d <- tibble(id = factor(rep(seq_len(n_pat), each = 2)), time = rep(0:1, n_pat)) |>
+    mutate(y = rbinom(n(), 1, plogis(-0.5 + 0.5 * time + rnorm(n_pat, sd = sd_b_true)[id])))
+  tibble(
+    method = c("Laplace", "Adaptive quadrature"),
+    sd_b = c(glmer_sd(d), glmer_sd(d, nAGQ = 25))
+  )
+}) |>
+  list_rbind() |>
+  mutate(method = fct_inorder(method))
+
+sim_summary <- sim_bin |>
+  group_by(method) |>
+  summarise(
+    median_sd = median(sd_b, na.rm = TRUE),
+    pct_zero = mean(sd_b < 1e-4, na.rm = TRUE)
+  )
+```
+
+```{r}
+#| echo: false
+#| fig-height: 4.2
+sim_bin |>
+  filter(!is.na(sd_b)) |>
+  mutate(type = if_else(sd_b < 1e-4, "Singular fit", "Positive estimate")) |>
+  ggplot(aes(sd_b, fct_rev(method))) +
+  geom_jitter(aes(colour = type), height = 0.25, width = 0, alpha = 0.7, size = 2.5) +
+  geom_point(data = sim_summary, aes(median_sd), shape = "|", size = 16) +
+  geom_vline(xintercept = sd_b_true, linetype = "dashed") +
+  annotate("text", x = sd_b_true, y = 2.45, label = "true value", hjust = -0.1, size = 5) +
+  scale_colour_manual(values = c(`Positive estimate` = "#2a78d6", `Singular fit` = "#eb6834")) +
+  labs(x = "Estimated random intercept SD (vertical bar: median)", y = NULL, colour = NULL) +
+  theme_minimal(base_size = 18) +
+  theme(legend.position = "bottom", panel.grid.minor = element_blank())
+```
+
+Laplace underestimates the SD (median `r round(sim_summary$median_sd[1], 2)` vs. `r round(sim_summary$median_sd[2], 2)` with quadrature). Singular fits occur with both methods (Laplace `r scales::percent(sim_summary$pct_zero[1])`, quadrature `r scales::percent(sim_summary$pct_zero[2])`): they come from the likelihood, not the approximation.
+
+## What Can We Do?
+
+- Treat a singular fit as information: these data cannot distinguish the variance from zero
+- Simplify the random effects: drop correlations with `(x || id)`, or drop random slopes
+- More accurate integral: `glmer(..., nAGQ = 25)`, available with a single random intercept
+- Bayesian fit with `brms`: the posterior shows the full uncertainty about the SD, instead of a point estimate at zero
+
+
+## Take-Home Messages
+
+- No imputation: the random effects are integrated out
+- Missing outcomes: fine under MAR; missing covariates: not
+- REML for variances; ML to compare fixed effects
+- Small binary data: check Laplace against quadrature
+- GLMM coefficients are subject-specific
+- Singular fits and warnings tell you about the data
 
 # Questions? Comments?
+
 
 ## References
