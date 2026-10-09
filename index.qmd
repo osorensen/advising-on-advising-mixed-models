@@ -77,6 +77,8 @@ p + geom_line(alpha = 0.4)
 
 ## Linear Mixed Model
 
+For $i=1,\dots,m, j=1,\dots,n_{i}$:
+
 $$
 y_{ij} = \beta_{0} + b_{0i} + (\beta + b_{i}) x_{ij} + \epsilon_{ij}
 $$
